@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Arc Light design tokens ──────────────────────────────────────────────── */
+:root {
+  --bg-gradient: #f5f7fa;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-muted: rgba(241, 244, 248, 0.8);
+  --border: rgba(18, 45, 69, 0.08);
+  --ink: #0e1e30;
+  --ink-2: #2a3f56;
+  --muted: #6b7f96;
+  --subtle: #99aab8;
+  --accent: #122d45;
+  --accent-hover: #1b3d5e;
+  --danger: #c53030;
+  --success: #1a6b3a;
+  --warning: #b45309;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-optical-sizing: auto;
+  color: var(--ink);
+  background: var(--bg-gradient);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.display {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', 'Menlo', monospace;
+}

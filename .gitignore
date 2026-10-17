@@ -1,0 +1,15 @@
+# secrets: never commit
+.env
+.env.*
+*.key
+
+# dependencies and build output
+# (verify/sourcify/sources/node_modules/ holds the OpenZeppelin sources used for verification: keep it)
+/node_modules/
+studio/node_modules/
+deploy/node_modules/
+studio/lib/
+studio/contracts/cache/
+studio/dist/
+deploy/deploy.js
+__pycache__/

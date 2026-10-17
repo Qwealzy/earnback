@@ -1,0 +1,90 @@
+--- a/src/app-config.ts
++++ b/src/app-config.ts
+@@ -8,8 +8,9 @@
+ 
+ export const APP_NAME = 'Earnback'
+ 
+-// Sourcify verification base — update with actual IPFS CID once verified
+-export const SOURCIFY_URL = 'https://sourcify.dev/#/lookup/' // + address
++// Sourcify: public file browser and the v2 lookup API (CORS open), both keyed by chain id + address
++export const SOURCIFY_REPO_URL = 'https://repo.sourcify.dev'
++export const SOURCIFY_API_URL = 'https://sourcify.dev/server'
+ 
+ // ─── network switch ────────────────────────────────────────────────────────
+ // Build with VITE_NETWORK=mainnet for Arc mainnet; anything else means testnet.
+@@ -29,8 +30,9 @@
+   },
+   mainnet: {
+     chainId: 5042,         // Arc Mainnet
+-    vaultAddress: '' as `0x${string}`, // set after the mainnet deploy
+-    deployBlock: 0,                    // set after the mainnet deploy
++    // Deployed 18 Oct 2026 by the user's EOA, tx 0x8761d0d431eea820354366f32a5833936397a0d09fe0a87015ca560a5e8a548b
++    vaultAddress: '0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81' as `0x${string}`,
++    deployBlock: 26510136,
+     readRpcs: ['https://rpc.mainnet.arc.io', 'https://rpc.quicknode.mainnet.arc.io', 'https://rpc.drpc.mainnet.arc.io'],
+     scanRpcs: ['https://rpc.mainnet.arc.io', 'https://rpc.quicknode.mainnet.arc.io'],
+   },
+--- a/src/pages/ProofPage.tsx
++++ b/src/pages/ProofPage.tsx
+@@ -8,7 +8,7 @@
+ import { Card, Inner, SectionTitle, DetailRow, Layout } from '@/components/Layout'
+ import { useVaultParams, useVaultGlobals } from '@/hooks/useVaultRead'
+ import { useVaultScan } from '@/hooks/useAgreementIds'
+-import { VAULT_ADDRESS, CHAIN, SOURCIFY_URL, addrUrl } from '@/app-config'
++import { VAULT_ADDRESS, CHAIN, CHAIN_ID, SOURCIFY_REPO_URL, SOURCIFY_API_URL, addrUrl } from '@/app-config'
+ import { fmtUsdc, fmtAddr } from '@/utils/format'
+ import { PROOF_SCENARIOS, type ProofScenario } from '@/proof-scenarios'
+ 
+@@ -134,8 +134,35 @@
+   )
+ }
+ 
++// ─── Sourcify status, read live (no wallet, no key) ───────────────────────
++type SourcifyState = 'checking' | 'exact_match' | 'match' | 'not_verified' | 'unavailable'
++function useSourcifyStatus(): SourcifyState {
++  const [state, setState] = useState<SourcifyState>('checking')
++  React.useEffect(() => {
++    let live = true
++    fetch(`${SOURCIFY_API_URL}/v2/contract/${CHAIN_ID}/${VAULT_ADDRESS}`)
++      .then(r => r.json())
++      .then((j: { match?: string | null }) => {
++        if (!live) return
++        setState(j.match === 'exact_match' ? 'exact_match' : j.match === 'match' ? 'match' : 'not_verified')
++      })
++      .catch(() => { if (live) setState('unavailable') })
++    return () => { live = false }
++  }, [])
++  return state
++}
++
++const SOURCIFY_LABEL: Record<SourcifyState, string> = {
++  checking: 'Checking…',
++  exact_match: 'Verified (exact match)',
++  match: 'Verified (partial match)',
++  not_verified: 'Not verified',
++  unavailable: 'Sourcify unavailable',
++}
++
+ // ─── main page ────────────────────────────────────────────────────────────
+ export function ProofPage() {
++  const sourcify = useSourcifyStatus()
+   const { data: paramsData } = useVaultParams()
+   const { data: globalsData } = useVaultGlobals()
+   // ONE call to the shared scanner — never call two shims from the same component.
+@@ -187,13 +214,13 @@
+             </DetailRow>
+             <DetailRow label="Sourcify">
+               <a
+-                href={SOURCIFY_URL + VAULT_ADDRESS}
++                href={`${SOURCIFY_REPO_URL}/${CHAIN_ID}/${VAULT_ADDRESS}`}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="inline-flex items-center gap-1 text-xs"
+-                style={{ color: 'var(--muted)' }}
++                style={{ color: sourcify === 'exact_match' || sourcify === 'match' ? 'var(--success)' : 'var(--muted)' }}
+               >
+-                Lookup (not yet verified) <ExternalLink className="size-3" />
++                {SOURCIFY_LABEL[sourcify]} <ExternalLink className="size-3" />
+               </a>
+             </DetailRow>
+           </Card>

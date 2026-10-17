@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Earnback deploy</title>
+  <style>
+    :root { --ink: #122d45; --muted: #5b6b7a; --bg: #f5f7fa; --card: #fff; --ok: #137a3a; --bad: #b42318; --line: #e3e8ee; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin: 16px 0; }
+    .muted { color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    td { border-top: 1px solid var(--line); padding: 6px 4px; vertical-align: top; }
+    code, pre { font: 12px/1.45 ui-monospace, monospace; }
+    pre { background: #0f1b26; color: #d7e3ee; padding: 12px; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    button { background: var(--ink); color: #fff; border: 0; border-radius: 10px; padding: 10px 18px; font-size: 15px; cursor: pointer; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    select, input[type=file] { font-size: 14px; }
+    #log { padding-left: 18px; font-size: 13px; }
+    #log .ok { color: var(--ok); } #log .bad { color: var(--bad); font-weight: 600; }
+    #mainnetBox { border: 2px solid var(--bad); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Earnback deploy</h1>
+  <p class="muted">Deploys the Studio artifact as it is, from your own MetaMask EOA. Nothing is recompiled, no key leaves your wallet. Open via http://127.0.0.1:8080.</p>
+
+  <div class="card">
+    <strong>1. Network</strong><br />
+    <select id="network">
+      <option value="testnet" selected>Arc Testnet (5042002): rehearsal</option>
+      <option value="mainnet">Arc mainnet (5042): real USDC</option>
+    </select>
+    <div id="mainnetBox" style="display:none">
+      <label><input type="checkbox" id="mainnetConfirm" /> I am deploying to <b>Arc mainnet</b> with real USDC, from my own wallet, and I have checked the values below.</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <strong>2. Studio artifact</strong>
+    <p class="muted">Choose <code>studio/contracts/out/RetentionVault.sol/RetentionVault.json</code>. The page checks its hash before enabling Deploy.</p>
+    <input type="file" id="artifact" accept=".json,application/json" />
+  </div>
+
+  <div class="card">
+    <strong>3. Constructor values</strong> <span class="muted">(fixed for ever after deploy; decision K1 in docs/MAINNET-PLAN.md)</span>
+    <table><tbody id="args"></tbody></table>
+    <p class="muted">ABI-encoded arguments appended to the bytecode:</p>
+    <pre id="encoded">(load the artifact)</pre>
+  </div>
+
+  <div class="card">
+    <strong>4. Deploy</strong>
+    <p class="muted">MetaMask shows "Deploy a contract", site 127.0.0.1, the network you chose, value 0, a fee of a few cents of USDC.</p>
+    <button id="deploy" disabled>Deploy with MetaMask</button>
+    <ol id="log"></ol>
+    <pre id="summary"></pre>
+  </div>
+</main>
+<script type="module" src="./deploy.js"></script>
+</body>
+</html>

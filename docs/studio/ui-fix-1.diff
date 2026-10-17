@@ -1,0 +1,124 @@
+diff -ru a/src/pages/AgreementPage.tsx b/src/pages/AgreementPage.tsx
+--- a/src/pages/AgreementPage.tsx
++++ b/src/pages/AgreementPage.tsx
+@@ -39,7 +39,7 @@
+   | 'resolveUnanswered' | 'resolveByDefault'
+   | 'objectProvisional' | 'arbiterDecideProvisional_accept' | 'arbiterDecideProvisional_reject'
+   | 'resolveProvisional' | 'withdraw'
+-  | 'approvePay' | 'approveOpenClaim'
++  | 'approvePay'
+ 
+ export function AgreementPage() {
+   const { id } = useParams<{ id: string }>()
+@@ -117,7 +117,8 @@
+     )
+   }
+ 
+-  if (!ag) {
++  // agreement(id) returns a zeroed struct for unknown ids, so check the payer too
++  if (!ag || ag.payer === '0x0000000000000000000000000000000000000000') {
+     return (
+       <Layout>
+         <div className="py-10 text-center">
+diff -ru a/src/pages/AgreementsPage.tsx b/src/pages/AgreementsPage.tsx
+--- a/src/pages/AgreementsPage.tsx
++++ b/src/pages/AgreementsPage.tsx
+@@ -33,8 +33,8 @@
+ // maxAgreementValue on testnet = 50 USDC; use safe values that never hit the cap.
+ const DEMO_PRESET: Omit<CreateForm, 'payee' | 'arbiter'> = {
+   contractValue: '2.00',
+-  maxBps: '1000',
+-  minBps: '0',
++  maxBps: '500',
++  minBps: '100',
+   defectPeriod: '600',        // 10 min
+   responseWindow: '180',      // 3 min
+   arbiterWindow: '180',       // 3 min
+@@ -42,7 +42,7 @@
+ 
+ const REAL_PRESET: Omit<CreateForm, 'payee' | 'arbiter'> = {
+   contractValue: '50.00',     // at the contract cap; reduce if needed
+-  maxBps: '1000',
++  maxBps: '500',
+   minBps: '100',
+   defectPeriod: '31536000',  // 365 days
+   responseWindow: '1209600', // 14 days
+@@ -55,6 +55,8 @@
+   ...DEMO_PRESET,
+ }
+ 
++const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
++
+ function isAddress(s: string): s is `0x${string}` {
+   return /^0x[0-9a-fA-F]{40}$/.test(s)
+ }
+@@ -130,7 +132,13 @@
+ 
+   function validate(): boolean {
+     if (!isAddress(form.payee)) { setFormError('Invalid payee address'); return false }
+-    if (!isAddress(form.arbiter)) { setFormError('Invalid arbiter address'); return false }
++    const arbiterAddr = form.arbiter.trim() === '' ? ZERO_ADDRESS : form.arbiter.trim()
++    if (!isAddress(arbiterAddr)) { setFormError('Invalid arbiter address'); return false }
++    const me = address?.toLowerCase()
++    if (me && form.payee.toLowerCase() === me) { setFormError('Payee must differ from you (the payer)'); return false }
++    if (arbiterAddr !== ZERO_ADDRESS && (arbiterAddr.toLowerCase() === me || arbiterAddr.toLowerCase() === form.payee.toLowerCase())) {
++      setFormError('Arbiter must differ from payer and payee'); return false
++    }
+ 
+     const val = parseUsdcInput(form.contractValue)
+     if (!val || val === 0n) { setFormError('Invalid contract value'); return false }
+@@ -146,6 +154,7 @@
+     }
+     const minB = parseBps(form.minBps) ?? 0n
+     if (minB > maxB) { setFormError('Min bps must be ≤ max bps'); return false }
++    if (floorBps > 0n && minB < floorBps) { setFormError(`Min bps must be ≥ vault floor (${floorBps} bps)`); return false }
+ 
+     // Time bounds: 60s … 730 days = 63072000s; response/arbiter ≤ 30 days = 2592000s
+     const defect = parseSeconds(form.defectPeriod)
+@@ -174,7 +183,7 @@
+         functionName: 'createAgreement',
+         args: [
+           form.payee as `0x${string}`,
+-          form.arbiter as `0x${string}`,
++          (form.arbiter.trim() === '' ? ZERO_ADDRESS : form.arbiter.trim()) as `0x${string}`,
+           parseUsdcInput(form.contractValue)!,
+           parseBps(form.maxBps)!,
+           parseBps(form.minBps) ?? 0n,
+@@ -264,12 +273,12 @@
+ 
+           {preset === 'demo' && (
+             <p className="mb-4 text-xs rounded-2xl px-3 py-2" style={{ background: 'var(--surface-muted)', color: 'var(--muted)' }}>
+-              Demo: short windows (1 min) for fast testnet walkthroughs. Replace addresses before submitting.
++              Demo: 10 min guarantee period and 3 min windows for fast testnet walkthroughs. Replace addresses before submitting.
+             </p>
+           )}
+           {preset === 'real' && (
+             <p className="mb-4 text-xs rounded-2xl px-3 py-2" style={{ background: 'var(--surface-muted)', color: 'var(--muted)' }}>
+-              Real: 30-day defect period, 7-day windows, 10% max retention. Suitable for production-style agreements.
++              Real: 365-day guarantee period, 14-day windows, 5% max retention. Suitable for production-style agreements.
+             </p>
+           )}
+ 
+diff -ru a/src/pages/RecordPage.tsx b/src/pages/RecordPage.tsx
+--- a/src/pages/RecordPage.tsx
++++ b/src/pages/RecordPage.tsx
+@@ -139,7 +139,9 @@
+ 
+   const { data: chainRate } = useRateFor(payeeAddr, maxBps)
+ 
+-  const record = recordData?.[0].result as { n: bigint; k: bigint } | undefined
++  // record() returns two outputs; viem decodes them as a tuple [n, k], not an object
++  const recordTuple = recordData?.[0].result as readonly [bigint, bigint] | undefined
++  const record = recordTuple ? { n: recordTuple[0], k: recordTuple[1] } : undefined
+   const credibility = recordData?.[1].result
+ 
+   const priorA = (paramsData?.[0].result) ?? 0n
+@@ -281,7 +283,7 @@
+               <span className="mono text-xs">{priorB.toString()}</span>
+             </DetailRow>
+             <DetailRow label="zWad">
+-              <span className="mono text-xs">{zWad.toString()} <span style={{ color: 'var(--subtle)' }}>({fmtWad(zWad)} × credit damping)</span></span>
++              <span className="mono text-xs">{zWad.toString()} <span style={{ color: 'var(--subtle)' }}>({fmtWad(zWad)} σ prudence margin)</span></span>
+             </DetailRow>
+             <DetailRow label="capBps">{fmtBps(capBps)}</DetailRow>
+             <DetailRow label="floorBps">{fmtBps(floorBps)}</DetailRow>

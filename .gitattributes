@@ -1,0 +1,2 @@
+# Sourcify inputs must keep byte-exact content (keccak256 is checked)
+verify/sourcify/** -text

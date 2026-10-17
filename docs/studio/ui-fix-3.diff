@@ -1,0 +1,643 @@
+--- a/src/pages/AgreementPage.tsx
++++ b/src/pages/AgreementPage.tsx
+@@ -4,13 +4,13 @@
+ import React, { useState } from 'react'
+ import { useParams, Link } from 'react-router-dom'
+ import {
+-  useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain
++  useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useReadContract
+ } from 'wagmi'
+ import { toast } from 'sonner'
+ import { ArrowLeft, ExternalLink } from 'lucide-react'
+ import { RETENTION_VAULT_ABI } from '@/abi/RetentionVault'
+ import { VAULT_ADDRESS, CHAIN_ID, txUrl, addrUrl } from '@/app-config'
+-import { useAgreement, useAgreementAmounts } from '@/hooks/useVaultRead'
++import { useAgreement, useAgreementAmounts, useWithdrawable } from '@/hooks/useVaultRead'
+ import { Card, Inner, SectionTitle, DetailRow, Layout } from '@/components/Layout'
+ import { StateBadge } from '@/components/StateBadge'
+ import { TxButton } from '@/components/TxButton'
+@@ -22,8 +22,14 @@
+ import { parseOnchainError } from '@/utils/onchainError'
+ 
+ const USDC_ADDR = '0x3600000000000000000000000000000000000000' as `0x${string}`
++const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+ 
+-// Minimal USDC approve ABI
++// Contract enums (RetentionVault.sol). Keep in sync with StateBadge.
++const S_PROPOSED = 0, S_ACTIVE = 1, S_DEFECT = 2
++const C_NONE = 0, C_OPEN = 1, C_DISPUTED = 2
++const P_REQUESTED = 1, P_DISPUTED = 2
++
++// Minimal USDC ABI: exact approve and the allowance it creates
+ const USDC_APPROVE_ABI = [
+   {
+     type: 'function', name: 'approve',
+@@ -31,6 +37,12 @@
+     outputs: [{ name: '', type: 'bool' }],
+     stateMutability: 'nonpayable',
+   },
++  {
++    type: 'function', name: 'allowance',
++    inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
++    outputs: [{ name: '', type: 'uint256' }],
++    stateMutability: 'view',
++  },
+ ] as const
+ 
+ type ActionKey =
+@@ -55,6 +67,20 @@
+   const pool = (amounts?.[0].result) ?? 0n
+   const available = (amounts?.[1].result) ?? 0n
+ 
++  const { data: myWithdrawable, refetch: refetchWithdrawable } = useWithdrawable(address)
++  const { data: usdcAllowance, refetch: refetchAllowance } = useReadContract({
++    address: USDC_ADDR, abi: USDC_APPROVE_ABI, functionName: 'allowance',
++    args: [address ?? ZERO_ADDRESS, VAULT_ADDRESS],
++    query: { enabled: !!address },
++  })
++
++  // Re-render every 5 s so deadline-gated buttons appear without a manual reload
++  const [now, setNow] = useState(() => BigInt(Math.floor(Date.now() / 1000)))
++  React.useEffect(() => {
++    const t = setInterval(() => setNow(BigInt(Math.floor(Date.now() / 1000))), 5000)
++    return () => clearInterval(t)
++  }, [])
++
+   const { writeContract, data: txHash, isPending, reset: resetWrite } = useWriteContract()
+   const { isLoading: isConfirming, isSuccess, isError: isTxError } = useWaitForTransactionReceipt({ hash: txHash })
+ 
+@@ -65,27 +91,39 @@
+   const [arbiterShare, setArbiterShare] = useState('')
+   const [objReason, setObjReason] = useState('')
+   const [pendingAction, setPendingAction] = useState<ActionKey | null>(null)
++  // The action behind the current tx, and the last tx already handled (the effect must act once per tx)
++  const lastActionRef = React.useRef<ActionKey | null>(null)
++  const handledTxRef = React.useRef<string | undefined>(undefined)
+ 
+-  // eslint-disable-next-line react/set-state-in-effect -- post-tx cleanup, guarded by isSuccess flag
++  // eslint-disable-next-line react/set-state-in-effect -- post-tx cleanup, runs once per tx hash
+   React.useEffect(() => {
++    if (!txHash || handledTxRef.current === txHash) return
+     if (isSuccess) {
++      handledTxRef.current = txHash
+       toast.success('Transaction confirmed')
+       void refetch()
+       void refetchAmounts()
++      void refetchWithdrawable()
++      void refetchAllowance()
+       setPendingAction(null)
+-      setPayAmount('')
+-      setPayRef('')
++      // Keep the amount after an approve: the next step (Pay Progress) needs the same value
++      if (lastActionRef.current !== 'approvePay') {
++        setPayAmount('')
++        setPayRef('')
++      }
+       setClaimAmount('')
+       setClaimEvidence('')
+       setArbiterShare('')
+       setObjReason('')
+     }
+     if (isTxError) {
++      handledTxRef.current = txHash
+       toast.error('Transaction failed')
+     }
+-  }, [isSuccess, isTxError, refetch, refetchAmounts])
++  }, [txHash, isSuccess, isTxError, refetch, refetchAmounts, refetchWithdrawable, refetchAllowance])
+ 
+   function write(action: ActionKey, fn: () => void) {
++    lastActionRef.current = action
+     setPendingAction(action)
+     resetWrite()
+     try { fn() } catch (e) { toast.error(parseOnchainError(e)); setPendingAction(null) }
+@@ -137,6 +175,26 @@
+   const isArbiter = address?.toLowerCase() === ag.arbiter.toLowerCase()
+   const claimStatus = ag.claim.status
+   const provStatus = ag.provisionalStatus
++  const hasArbiter = ag.arbiter !== ZERO_ADDRESS
++  // Deadline rules mirror the contract: claims open while now < defectEnd, finalize at now >= defectEnd,
++  // answers and decisions are valid up to and including the deadline, resolvers need now > deadline.
++  const inDefectWindow = state === S_DEFECT && now < ag.defectEnd
++  const canFinalize = state === S_DEFECT && claimStatus === C_NONE && now >= ag.defectEnd
++  const responseOpen = claimStatus === C_OPEN && now <= ag.claim.responseDeadline
++  const responseLapsed = claimStatus === C_OPEN && now > ag.claim.responseDeadline
++  const arbiterOpen = claimStatus === C_DISPUTED && hasArbiter && now <= ag.claim.arbiterDeadline
++  const arbiterLapsed = claimStatus === C_DISPUTED && (!hasArbiter || now > ag.claim.arbiterDeadline)
++  const provRequestOpen = provStatus === P_REQUESTED && now <= ag.provisionalDeadline
++  const provArbiterOpen = provStatus === P_DISPUTED && hasArbiter && now <= ag.provisionalArbiterDeadline
++  const provResolvable = state === S_ACTIVE && (
++    (provStatus === P_REQUESTED && now > ag.provisionalDeadline) ||
++    (provStatus === P_DISPUTED && (!hasArbiter || now > ag.provisionalArbiterDeadline))
++  )
++  const canSignAsPayer = state === S_ACTIVE && isPayer && !ag.payerSigned && provStatus !== P_DISPUTED
++  const canSignAsPayee = state === S_ACTIVE && isPayee && !ag.payeeSigned
++  const withdrawableAmt = (myWithdrawable as bigint | undefined) ?? 0n
++  const payAmt = parseUsdcInput(payAmount)
++  const allowanceCoversPay = payAmt !== null && payAmt > 0n && ((usdcAllowance as bigint | undefined) ?? 0n) >= payAmt
+ 
+   // ── helper to pad a bytes32 ref ────────────────────────────────────────
+   function toBytes32(s: string): `0x${string}` {
+@@ -211,7 +269,7 @@
+               </a>
+             </DetailRow>
+             <DetailRow label="Retention Rate">
+-              {state >= 1 ? fmtBps(ag.retentionBps) : '— (pending acceptance)'}
++              {state >= S_ACTIVE ? fmtBps(ag.retentionBps) : '— (pending acceptance)'}
+             </DetailRow>
+             <DetailRow label="Max / Min Bps">
+               {fmtBps(ag.maxBps)} / {fmtBps(ag.minBps)}
+@@ -238,7 +296,7 @@
+           </Card>
+ 
+           {/* Claim section */}
+-          {(state === 2 || claimStatus > 0) && (
++          {claimStatus !== C_NONE && (
+             <Card>
+               <div className="flex items-center justify-between mb-3">
+                 <SectionTitle>Defect Claim</SectionTitle>
+@@ -299,25 +357,19 @@
+             {address && (
+               <div className="flex flex-col gap-3">
+ 
+-                {/* Proposed state */}
+-                {state === 0 && isPayer && txBtn('cancel', 'Cancel Proposal', () => writeContract({
++                {/* Proposed: payer may cancel, payee accepts (rate is frozen at acceptance) */}
++                {state === S_PROPOSED && isPayer && txBtn('cancel', 'Cancel Proposal', () => writeContract({
+                   address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+                   functionName: 'cancelProposal', args: [agreementId],
+                 }), 'danger')}
+ 
+-                {state === 0 && isPayee && txBtn('accept', 'Accept Agreement', () => writeContract({
++                {state === S_PROPOSED && isPayee && txBtn('accept', 'Accept Agreement', () => writeContract({
+                   address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+                   functionName: 'acceptAgreement', args: [agreementId],
+                 }))}
+ 
+-                {/* Provisional sign (Proposed state) */}
+-                {state === 0 && (isPayer || isPayee) && !ag.payerSigned && !ag.payeeSigned && txBtn('signProvisional', 'Sign Provisional', () => writeContract({
+-                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                  functionName: 'signProvisional', args: [agreementId],
+-                }))}
+-
+-                {/* Active state — pay progress */}
+-                {state === 1 && isPayer && (
++                {/* Active: payer pays progress (exact approve first) */}
++                {state === S_ACTIVE && isPayer && (
+                   <div className="flex flex-col gap-2">
+                     <label className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--subtle)', letterSpacing: '0.07em' }}>
+                       Pay amount (USDC)
+@@ -336,12 +388,13 @@
+                       value={payRef}
+                       onChange={e => setPayRef(e.target.value)}
+                     />
+-                    {txBtn('approvePay', `Approve ${payAmount ? `$${payAmount}` : 'USDC'} (exact)`, () => {
++                    {/* Step 1 until the allowance covers the amount, then step 2 */}
++                    {!allowanceCoversPay && txBtn('approvePay', `Step 1 of 2: Approve ${payAmount ? `$${payAmount}` : 'USDC'} (exact)`, () => {
+                       const amt = parseUsdcInput(payAmount)
+                       if (!amt) return toast.error('Enter an amount first')
+                       writeContract({ address: USDC_ADDR, abi: USDC_APPROVE_ABI, functionName: 'approve', args: [VAULT_ADDRESS, amt] })
+                     }, 'secondary')}
+-                    {txBtn('pay', 'Pay Progress', () => {
++                    {allowanceCoversPay && txBtn('pay', 'Step 2 of 2: Pay Progress', () => {
+                       const amt = parseUsdcInput(payAmount)
+                       if (!amt) return toast.error('Invalid amount')
+                       writeContract({
+@@ -349,21 +402,69 @@
+                         functionName: 'payProgress', args: [agreementId, amt, toBytes32(payRef)],
+                       })
+                     })}
+-                    {txBtn('finalize', 'Finalize', () => writeContract({
++                  </div>
++                )}
++
++                {/* Active: provisional acceptance. Payee signing first starts the payer's deadline (D10). */}
++                {canSignAsPayee && txBtn('signProvisional', ag.payerSigned ? 'Sign Provisional Acceptance' : 'Request Provisional Acceptance', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'signProvisional', args: [agreementId],
++                }))}
++                {canSignAsPayer && txBtn('signProvisional', 'Sign Provisional Acceptance', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'signProvisional', args: [agreementId],
++                }))}
++
++                {/* Active: payer may object to a provisional request before its deadline */}
++                {state === S_ACTIVE && isPayer && provRequestOpen && (
++                  <div className="flex flex-col gap-2">
++                    <div>
++                      <input
++                        className="w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] mono"
++                        style={{ background: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--ink)' }}
++                        placeholder="Reason hash (0x bytes32)"
++                        value={objReason}
++                        onChange={e => setObjReason(e.target.value)}
++                      />
++                      <Link to="/tools/hash" className="text-xs mt-1 inline-block hover:underline" style={{ color: 'var(--muted)' }}>
++                        Need a hash? Use the hash tool →
++                      </Link>
++                    </div>
++                    {txBtn('objectProvisional', 'Object', () => writeContract({
+                       address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                      functionName: 'finalize', args: [agreementId],
++                      functionName: 'objectProvisional', args: [agreementId, toBytes32(objReason)],
++                    }), 'danger')}
++                  </div>
++                )}
++
++                {/* Active: arbiter decides a provisional objection */}
++                {state === S_ACTIVE && isArbiter && provArbiterOpen && (
++                  <div className="flex flex-col gap-2">
++                    {txBtn('arbiterDecideProvisional_accept', 'Decide: Accept', () => writeContract({
++                      address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                      functionName: 'arbiterDecideProvisional', args: [agreementId, true],
+                     }))}
++                    {txBtn('arbiterDecideProvisional_reject', 'Decide: Reject', () => writeContract({
++                      address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                      functionName: 'arbiterDecideProvisional', args: [agreementId, false],
++                    }), 'danger')}
+                   </div>
+                 )}
+ 
+-                {/* Active → open claim (payer) */}
+-                {state === 1 && isPayer && (
++                {/* Active: anyone resolves a lapsed provisional request or objection (deemed acceptance) */}
++                {provResolvable && txBtn('resolveProvisional', 'Resolve Provisional (deemed accepted)', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'resolveProvisional', args: [agreementId],
++                }))}
++
++                {/* Defect period: payer opens a claim before defectEnd */}
++                {inDefectWindow && isPayer && claimStatus === C_NONE && (
+                   <div className="flex flex-col gap-2 mt-1">
+                     <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--subtle)', letterSpacing: '0.07em' }}>Open Defect Claim</p>
+                     <input
+                       className="w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] mono"
+                       style={{ background: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--ink)' }}
+-                      placeholder="Claim amount (USDC)"
++                      placeholder={`Claim amount (USDC, max ${fmtUsdc(available)})`}
+                       value={claimAmount}
+                       onChange={e => setClaimAmount(e.target.value)}
+                     />
+@@ -382,6 +483,7 @@
+                     {txBtn('openClaim', 'Open Claim', () => {
+                       const amt = parseUsdcInput(claimAmount)
+                       if (!amt) return toast.error('Invalid claim amount')
++                      if (amt > available) return toast.error(`Claim exceeds the available retention (${fmtUsdc(available)})`)
+                       writeContract({
+                         address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+                         functionName: 'openClaim',
+@@ -391,8 +493,8 @@
+                   </div>
+                 )}
+ 
+-                {/* Disputed — respond (payee) */}
+-                {state === 2 && isPayee && claimStatus === 0 && (
++                {/* Open claim: payee answers up to the response deadline */}
++                {isPayee && responseOpen && (
+                   <div className="flex flex-col gap-2">
+                     {txBtn('respondAccept', 'Accept Claim', () => writeContract({
+                       address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+@@ -405,19 +507,19 @@
+                   </div>
+                 )}
+ 
+-                {/* Disputed — arbiter decide */}
+-                {state === 2 && isArbiter && claimStatus === 2 && (
++                {/* Disputed claim: arbiter splits the claim amount up to the arbiter deadline */}
++                {isArbiter && arbiterOpen && (
+                   <div className="flex flex-col gap-2">
+                     <input
+                       className="w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] mono"
+                       style={{ background: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--ink)' }}
+-                      placeholder="Payer share (USDC)"
++                      placeholder="Payer share (USDC, 0 = all back to payee)"
+                       value={arbiterShare}
+                       onChange={e => setArbiterShare(e.target.value)}
+                     />
+                     {txBtn('arbiterDecide', 'Decide', () => {
+                       const amt = parseUsdcInput(arbiterShare)
+-                      if (!amt) return toast.error('Invalid share')
++                      if (amt === null) return toast.error('Invalid share')
+                       writeContract({
+                         address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+                         functionName: 'arbiterDecide', args: [agreementId, amt],
+@@ -426,61 +528,27 @@
+                   </div>
+                 )}
+ 
+-                {/* Resolve unanswered / by default (permissionless) */}
+-                {state === 2 && claimStatus === 0 && secsUntil(ag.claim.responseDeadline) === 0 &&
+-                  txBtn('resolveUnanswered', 'Resolve Unanswered', () => writeContract({
+-                    address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                    functionName: 'resolveUnanswered', args: [agreementId],
+-                  }))}
+-
+-                {state === 2 && claimStatus === 2 && secsUntil(ag.claim.arbiterDeadline) === 0 &&
+-                  txBtn('resolveByDefault', 'Resolve By Default', () => writeContract({
+-                    address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                    functionName: 'resolveByDefault', args: [agreementId],
+-                  }))}
++                {/* Permissionless resolvers */}
++                {responseLapsed && txBtn('resolveUnanswered', 'Resolve Unanswered (claim accepted)', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'resolveUnanswered', args: [agreementId],
++                }))}
+ 
+-                {/* Provisional objection (payer, Active) */}
+-                {state === 1 && isPayer && provStatus === 1 && (
+-                  <div className="flex flex-col gap-2">
+-                    <div>
+-                      <input
+-                        className="w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] mono"
+-                        style={{ background: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--ink)' }}
+-                        placeholder="Reason hash (0x bytes32)"
+-                        value={objReason}
+-                        onChange={e => setObjReason(e.target.value)}
+-                      />
+-                      <Link to="/tools/hash" className="text-xs mt-1 inline-block hover:underline" style={{ color: 'var(--muted)' }}>
+-                        Need a hash? Use the hash tool →
+-                      </Link>
+-                    </div>
+-                    {txBtn('objectProvisional', 'Object', () => writeContract({
+-                      address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                      functionName: 'objectProvisional', args: [agreementId, toBytes32(objReason)],
+-                    }), 'danger')}
+-                  </div>
+-                )}
++                {arbiterLapsed && txBtn('resolveByDefault', 'Resolve By Default (back to payee)', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'resolveByDefault', args: [agreementId],
++                }))}
+ 
+-                {/* Arbiter decides provisional */}
+-                {isArbiter && provStatus === 2 && (
+-                  <div className="flex flex-col gap-2">
+-                    {txBtn('arbiterDecideProvisional_accept', 'Decide: Accept', () => writeContract({
+-                      address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                      functionName: 'arbiterDecideProvisional', args: [agreementId, true],
+-                    }))}
+-                    {txBtn('arbiterDecideProvisional_reject', 'Decide: Reject', () => writeContract({
+-                      address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                      functionName: 'arbiterDecideProvisional', args: [agreementId, false],
+-                    }), 'danger')}
+-                  </div>
+-                )}
++                {canFinalize && txBtn('finalize', 'Finalize', () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'finalize', args: [agreementId],
++                }))}
+ 
+-                {/* Resolve provisional by timeout */}
+-                {provStatus === 2 && secsUntil(ag.provisionalArbiterDeadline) === 0 &&
+-                  txBtn('resolveProvisional', 'Resolve Provisional', () => writeContract({
+-                    address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
+-                    functionName: 'resolveProvisional', args: [agreementId],
+-                  }))}
++                {/* Pull payment: any account with a balance withdraws it */}
++                {withdrawableAmt > 0n && txBtn('withdraw', `Withdraw ${fmtUsdc(withdrawableAmt)}`, () => writeContract({
++                  address: VAULT_ADDRESS, abi: RETENTION_VAULT_ABI,
++                  functionName: 'withdraw', args: [],
++                }))}
+ 
+               </div>
+             )}
+--- a/src/components/StateBadge.tsx
++++ b/src/components/StateBadge.tsx
+@@ -3,40 +3,40 @@
+  */
+ import React from 'react'
+ 
+-// State enum: 0=Proposed, 1=Active, 2=Disputed, 3=Finalized, 4=Cancelled
++// Mirrors RetentionVault.sol: State { Proposed, Active, DefectPeriod, Closed, Cancelled }
+ export const STATE_LABELS: Record<number, string> = {
+   0: 'Proposed',
+   1: 'Active',
+-  2: 'Disputed',
+-  3: 'Finalized',
++  2: 'Guarantee period',
++  3: 'Closed',
+   4: 'Cancelled',
+ }
+ 
+ const STATE_COLORS: Record<number, string> = {
+   0: 'bg-amber-100 text-amber-800',
+   1: 'bg-emerald-100 text-emerald-800',
+-  2: 'bg-red-100 text-red-700',
++  2: 'bg-blue-100 text-blue-700',
+   3: 'bg-slate-100 text-slate-600',
+   4: 'bg-slate-100 text-slate-400',
+ }
+ 
+-// ClaimStatus enum: 0=Open, 1=Accepted, 2=Disputed
++// Mirrors RetentionVault.sol: ClaimStatus { None, Open, Disputed }
+ export const CLAIM_STATUS_LABELS: Record<number, string> = {
+-  0: 'Open',
+-  1: 'Accepted',
++  0: 'None',
++  1: 'Open',
+   2: 'Disputed',
+ }
+ 
+ const CLAIM_STATUS_COLORS: Record<number, string> = {
+-  0: 'bg-amber-100 text-amber-800',
+-  1: 'bg-emerald-100 text-emerald-800',
++  0: 'bg-slate-50 text-slate-400',
++  1: 'bg-amber-100 text-amber-800',
+   2: 'bg-red-100 text-red-700',
+ }
+ 
+-// ProvisionalStatus enum: 0=None, 1=Pending, 2=Objected
++// Mirrors RetentionVault.sol: ProvisionalStatus { None, Requested, Disputed }
+ export const PROV_STATUS_LABELS: Record<number, string> = {
+   0: 'None',
+-  1: 'Pending',
++  1: 'Requested',
+   2: 'Objected',
+ }
+ 
+--- a/src/pages/AgreementsPage.tsx
++++ b/src/pages/AgreementsPage.tsx
+@@ -62,7 +62,6 @@
+ }
+ 
+ const WAD = 10n ** 18n
+-function fmtWad(wad: bigint) { return (Number(wad) / Number(WAD)).toFixed(4) }
+ 
+ export function AgreementsPage() {
+   const { address, chainId } = useAccount()
+@@ -311,7 +310,7 @@
+                 <div>
+                   <p className="text-xs" style={{ color: 'var(--subtle)' }}>Credibility Z</p>
+                   <p className="mono font-bold" style={{ color: 'var(--ink)' }}>
+-                    {priorA > 0n ? fmtWad(priorA * WAD / (priorA + priorB)) : '—'}
++                    {/* Z = n / (n + a + b); a new payee has n = 0, so Z = 0 */}0.0000
+                   </p>
+                 </div>
+                 <div>
+--- a/src/utils/rateCalc.ts
++++ b/src/utils/rateCalc.ts
+@@ -1,31 +1,31 @@
+ /**
+  * BigInt replica of RetentionVault.pUpper() and RetentionVault.rateFor().
+- * Must match the Solidity formula exactly (multiply before divide).
++ * Mirrors the Solidity integer math step by step (same order, floor division,
++ * floor square root like OpenZeppelin Math.sqrt), so the result equals the
++ * on-chain value exactly. Reference implementation: araclar/kesinti_orani.py.
+  *
+- * Solidity reference (from RetentionVault.sol):
++ * Solidity (RetentionVault.sol):
+  *
+- *   function pUpper(address payee) public view returns (uint256) {
+- *     Record memory r = _records[payee];
+- *     uint256 a = priorA + r.k;
+- *     uint256 b = priorB + (r.n - r.k);
+- *     return (a * WAD) / (a + b);          // << WAD-scaled probability
++ *   function pUpper(uint256 a1, uint256 b1) internal view returns (uint256) {
++ *     uint256 s = a1 + b1;
++ *     uint256 pHat = a1 * WAD / s;
++ *     uint256 variance = (a1 * WAD / s) * (b1 * WAD / s) / WAD * WAD / (s + WAD);
++ *     uint256 sd = Math.sqrt(variance * WAD);
++ *     return pHat + zWad * sd / WAD;
+  *   }
+  *
+- *   function rateFor(address payee, uint256 maxBps) public view returns (uint256) {
+- *     uint256 p = pUpper(payee);
+- *     uint256 p0 = (priorA * WAD) / (priorA + priorB);  // << same formula for zero-record
+- *     uint256 z = zWad;
+- *     // creditBps = maxBps * (p0 - p) / p0  when p < p0, else 0
+- *     // retentionBps = maxBps - creditBps, clamped to [floorBps, capBps]
+- *     if (p >= p0) return floorBps > maxBps ? floorBps : maxBps;   // no credit
+- *     uint256 creditBps = (maxBps * (p0 - p) * z) / (p0 * WAD);
+- *     uint256 raw = maxBps > creditBps ? maxBps - creditBps : 0;
+- *     if (raw < floorBps) return floorBps;
+- *     if (raw > capBps) return capBps;
+- *     return raw;
++ *   function rateFor(address payee, uint256 maxBps) public view returns (uint256 bps) {
++ *     (uint256 n, uint256 k) = record(payee);
++ *     uint256 pu = pUpper(priorA + k * WAD, priorB + (n - k) * WAD);
++ *     uint256 p0 = pUpper(priorA, priorB);
++ *     bps = maxBps * pu / p0;
++ *     if (bps > maxBps) bps = maxBps;
++ *     if (bps < floorBps) bps = floorBps;
+  *   }
+  *
+- * NOTE: the z parameter scales the credit.  z = 1e18 means full credit; z < 1e18 dampens.
++ * Beta-Binomial experience rating: the posterior mean plus z standard deviations
++ * is a prudent upper bound on the payee's claim probability; the rate scales the
++ * agreement's max by that bound relative to a payee with no record.
+  */
+ 
+ const WAD = 10n ** 18n
+@@ -43,45 +43,49 @@
+   k: bigint
+ }
+ 
+-/** Compute pUpper (WAD-scaled) given priors and a record. */
+-export function computePUpper(params: VaultParams, rec: RecordPoint): bigint {
+-  const a = params.priorA + rec.k
+-  const b = params.priorB + (rec.n - rec.k)
+-  return (a * WAD) / (a + b)
++/** Floor integer square root (same result as OpenZeppelin Math.sqrt). */
++export function isqrt(x: bigint): bigint {
++  if (x < 2n) return x
++  let r = x
++  let y = (r + 1n) / 2n
++  while (y < r) {
++    r = y
++    y = (r + x / r) / 2n
++  }
++  return r
+ }
+ 
+-/** Compute p0 (WAD-scaled) — the baseline for a new payee. */
+-export function computeP0(params: VaultParams): bigint {
+-  const denom = params.priorA + params.priorB
+-  if (denom === 0n) return WAD
+-  return (params.priorA * WAD) / denom
++/** Prudent upper bound on the claim probability (WAD-scaled), Beta(a1, b1) with WAD-scaled a1, b1. */
++export function pUpper(a1: bigint, b1: bigint, zWad: bigint): bigint {
++  const s = a1 + b1
++  const pHat = (a1 * WAD) / s
++  const variance = ((((a1 * WAD) / s) * ((b1 * WAD) / s)) / WAD) * WAD / (s + WAD)
++  const sd = isqrt(variance * WAD)
++  return pHat + (zWad * sd) / WAD
+ }
+ 
+-/** Compute the retention rate in bps for a given record and maxBps. */
++/** Retention rate in bps for a payee record and the agreement's maxBps, exactly as rateFor(). */
+ export function computeRateFor(params: VaultParams, rec: RecordPoint, maxBps: bigint): bigint {
+-  const p = computePUpper(params, rec)
+-  const p0 = computeP0(params)
+-
+-  // No credit case — credibility >= baseline
+-  if (p >= p0) {
+-    return params.floorBps > maxBps ? params.floorBps : maxBps
+-  }
++  const pu = pUpper(params.priorA + rec.k * WAD, params.priorB + (rec.n - rec.k) * WAD, params.zWad)
++  const p0 = pUpper(params.priorA, params.priorB, params.zWad)
++  if (p0 === 0n) return maxBps
++  let bps = (maxBps * pu) / p0
++  if (bps > maxBps) bps = maxBps
++  if (bps < params.floorBps) bps = params.floorBps
++  return bps
++}
+ 
+-  const diff = p0 - p
+-  // creditBps = maxBps * diff * z / (p0 * WAD)
+-  const creditBps = (maxBps * diff * params.zWad) / (p0 * WAD)
+-  const raw = maxBps > creditBps ? maxBps - creditBps : 0n
+-
+-  if (raw < params.floorBps) return params.floorBps
+-  if (raw > params.capBps) return params.capBps
+-  return raw
++/** Credibility Z = n / (n + a + b), WAD-scaled, as credibilityWad(). */
++export function computeCredibilityWad(params: VaultParams, n: bigint): bigint {
++  const denom = n * WAD + params.priorA + params.priorB
++  return denom === 0n ? 0n : (n * WAD * WAD) / denom
+ }
+ 
+ /**
+- * Build chart data: rate (bps) vs n (0..maxN clean closed agreements).
++ * Build chart data: rate (bps) vs n (0..maxN closed agreements).
+  * Two series:
+- *   "clean"   — k = 0 for all n (no upheld claims)
+- *   "onelaim" — k = 1 starting from n=1 (one upheld claim)
++ *   "clean"    — k = 0 for all n (no upheld claims)
++ *   "oneClaim" — k = 1 starting from n = 1 (one upheld claim)
+  */
+ export function buildRateChart(
+   params: VaultParams,
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -3,7 +3,7 @@
+  * Built with Arc Studio — https://studio.arc.io
+  */
+ 
+-import { http, createConfig } from 'wagmi'
++import { http, fallback, createConfig } from 'wagmi'
+ import { mainnet } from 'wagmi/chains'
+ import { arcTestnet } from 'viem/chains'
+ import { injected } from 'wagmi/connectors'
+@@ -16,7 +16,11 @@
+   chains: [arcTestnet, mainnet], // mainnet needed for ENS resolution
+   connectors: [injected()],
+   transports: {
+-    [arcTestnet.id]: http(),
++    [arcTestnet.id]: fallback([
++      http('https://rpc.drpc.testnet.arc.io'),
++      http('https://rpc.quicknode.testnet.arc.io'),
++      http('https://rpc.testnet.arc.io'),
++    ]),
+     [mainnet.id]: http(), // ENS resolution uses mainnet
+   },
+ })
+--- a/src/lib/vaultScanner.ts
++++ b/src/lib/vaultScanner.ts
+@@ -19,7 +19,7 @@
+ import { DEPLOY_BLOCK, CHAIN_ID, VAULT_ADDRESS, CHAIN } from '@/app-config'
+ 
+ // ─── client (single instance) ────────────────────────────────────────────────
+-const rpcUrl: string | undefined = CHAIN.rpcUrls[0]
++const rpcUrl: string | undefined = CHAIN_ID === 5042002 ? 'https://rpc.drpc.testnet.arc.io' : CHAIN.rpcUrls[0]
+ const viemChain = CHAIN_ID === 5042002 ? arcTestnet : arcTestnet
+ const client = createPublicClient({ chain: viemChain, transport: http(rpcUrl) })
+ 

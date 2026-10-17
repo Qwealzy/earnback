@@ -1,0 +1,188 @@
+--- a/src/app-config.ts
++++ b/src/app-config.ts
+@@ -12,8 +12,9 @@
+ export const SOURCIFY_URL = 'https://sourcify.dev/#/lookup/' // + address
+ 
+ // ─── network switch ────────────────────────────────────────────────────────
++// Build with VITE_NETWORK=mainnet for Arc mainnet; anything else means testnet.
+ type Network = 'testnet' | 'mainnet'
+-const ACTIVE_NETWORK: Network = 'testnet'
++export const ACTIVE_NETWORK: Network = import.meta.env.VITE_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'
+ 
+ // ─── per-network config ────────────────────────────────────────────────────
+ const NETWORK_CONFIG = {
+@@ -21,11 +22,17 @@
+     chainId: 5042002,      // Arc Testnet
+     vaultAddress: '0xfa5e10d370140acbdfe977437be6742908449b39' as `0x${string}`,
+     deployBlock: 67543436,
++    // eth_call: official endpoints (docs.arc.io/arc/references/rpc-endpoints)
++    readRpcs: ['https://rpc.drpc.testnet.arc.io', 'https://rpc.quicknode.testnet.arc.io', 'https://rpc.testnet.arc.io'],
++    // eth_getLogs: dRPC's free plan rejects every getLogs call, so it is not used here
++    scanRpcs: ['https://rpc.quicknode.testnet.arc.io', 'https://rpc.testnet.arc.io'],
+   },
+   mainnet: {
+     chainId: 5042,         // Arc Mainnet
+-    vaultAddress: '' as `0x${string}`, // replace before mainnet deploy
+-    deployBlock: 0,
++    vaultAddress: '' as `0x${string}`, // set after the mainnet deploy
++    deployBlock: 0,                    // set after the mainnet deploy
++    readRpcs: ['https://rpc.mainnet.arc.io', 'https://rpc.quicknode.mainnet.arc.io', 'https://rpc.drpc.mainnet.arc.io'],
++    scanRpcs: ['https://rpc.mainnet.arc.io', 'https://rpc.quicknode.mainnet.arc.io'],
+   },
+ }
+ 
+@@ -35,6 +42,11 @@
+ export const VAULT_ADDRESS = cfg.vaultAddress
+ export const DEPLOY_BLOCK = cfg.deployBlock
+ export const CHAIN_ID = cfg.chainId
++export const READ_RPCS = cfg.readRpcs
++export const SCAN_RPCS = cfg.scanRpcs
++export const IS_TESTNET = ACTIVE_NETWORK === 'testnet'
++/** False until the mainnet address is filled in; the app then shows a notice instead of reading. */
++export const IS_DEPLOYED = /^0x[0-9a-fA-F]{40}$/.test(VAULT_ADDRESS)
+ 
+ export function txUrl(hash: string): string {
+   return buildTxExplorerUrl(CHAIN_ID, hash)
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -5,22 +5,34 @@
+ 
+ import { http, fallback, createConfig } from 'wagmi'
+ import { mainnet } from 'wagmi/chains'
+-import { arcTestnet } from 'viem/chains'
++import { arc, arcTestnet } from 'viem/chains'
+ import { injected } from 'wagmi/connectors'
+ import { registerChain } from './tracing'
++import { IS_TESTNET } from './app-config'
+ 
+ // Pre-register chain RPC URLs so trace events show correct chain names immediately
+ registerChain(arcTestnet.id, arcTestnet.rpcUrls.default.http[0])
++registerChain(arc.id, arc.rpcUrls.default.http[0])
++
++// Official endpoints (docs.arc.io/arc/references/rpc-endpoints); the active network's chain comes first
++const testnetTransport = fallback([
++  http('https://rpc.drpc.testnet.arc.io'),
++  http('https://rpc.quicknode.testnet.arc.io'),
++  http('https://rpc.testnet.arc.io'),
++])
++const mainnetTransport = fallback([
++  http('https://rpc.mainnet.arc.io'),
++  http('https://rpc.quicknode.mainnet.arc.io'),
++  http('https://rpc.drpc.mainnet.arc.io'),
++])
+ 
+ export const config = createConfig({
+-  chains: [arcTestnet, mainnet], // mainnet needed for ENS resolution
++  // Ethereum mainnet stays for ENS resolution only
++  chains: IS_TESTNET ? [arcTestnet, arc, mainnet] : [arc, arcTestnet, mainnet],
+   connectors: [injected()],
+   transports: {
+-    [arcTestnet.id]: fallback([
+-      http('https://rpc.drpc.testnet.arc.io'),
+-      http('https://rpc.quicknode.testnet.arc.io'),
+-      http('https://rpc.testnet.arc.io'),
+-    ]),
++    [arcTestnet.id]: testnetTransport,
++    [arc.id]: mainnetTransport,
+     [mainnet.id]: http(), // ENS resolution uses mainnet
+   },
+ })
+--- a/src/lib/vaultScanner.ts
++++ b/src/lib/vaultScanner.ts
+@@ -15,19 +15,14 @@
+  */
+ 
+ import { createPublicClient, http, fallback, parseAbiItem, type AbiEvent } from 'viem'
+-import { arcTestnet } from 'viem/chains'
+-import { DEPLOY_BLOCK, CHAIN_ID, VAULT_ADDRESS, CHAIN } from '@/app-config'
++import { arc, arcTestnet } from 'viem/chains'
++import { DEPLOY_BLOCK, CHAIN_ID, VAULT_ADDRESS, SCAN_RPCS } from '@/app-config'
+ 
+ // ─── client (single instance) ────────────────────────────────────────────────
+ // For log scanning: quicknode first (tested with 10 k-block ranges), then the
+ // public primary. dRPC is excluded here — its free plan rejects eth_getLogs.
+-const viemChain = CHAIN_ID === 5042002 ? arcTestnet : arcTestnet
+-const scanTransport = CHAIN_ID === 5042002
+-  ? fallback([
+-      http('https://rpc.quicknode.testnet.arc.io'),
+-      http('https://rpc.testnet.arc.io'),
+-    ])
+-  : http(CHAIN.rpcUrls[0])
++const viemChain = CHAIN_ID === 5042 ? arc : arcTestnet
++const scanTransport = fallback(SCAN_RPCS.map(url => http(url)))
+ const client = createPublicClient({ chain: viemChain, transport: scanTransport })
+ 
+ // ─── ABI items ───────────────────────────────────────────────────────────────
+--- a/src/components/TxButton.tsx
++++ b/src/components/TxButton.tsx
+@@ -4,6 +4,7 @@
+  */
+ import React from 'react'
+ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
++import { CHAIN } from '@/app-config'
+ 
+ interface TxButtonProps {
+   label: string
+@@ -58,7 +59,7 @@
+         className={`${base} ${variants.primary} ${className}`}
+         style={styles.primary}
+       >
+-        Switch to Arc Testnet
++        Switch to {CHAIN.name}
+       </button>
+     )
+   }
+--- a/src/components/Layout.tsx
++++ b/src/components/Layout.tsx
+@@ -113,6 +113,9 @@
+           <p className="text-xs" style={{ color: 'var(--subtle)' }}>
+             Funds are non-custodial and held on-chain only. Earnback has no admin, no pause, no upgrade. Built with Arc Studio.
+           </p>
++          <p className="text-xs w-full" style={{ color: 'var(--warning)' }}>
++            Unaudited hackathon contract with no amount caps. Use small amounts only.
++          </p>
+         </div>
+       </footer>
+     </div>
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -4,8 +4,19 @@
+ import { RecordPage } from '@/pages/RecordPage'
+ import { ProofPage } from '@/pages/ProofPage'
+ import { HashToolPage } from '@/pages/HashToolPage'
++import { IS_DEPLOYED, CHAIN } from '@/app-config'
+ 
+ export default function App() {
++  if (!IS_DEPLOYED) {
++    return (
++      <div className="flex min-h-dvh items-center justify-center p-6" style={{ background: 'var(--bg-gradient)' }}>
++        <div className="max-w-md rounded-3xl p-6 text-center" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
++          <p className="display text-lg font-bold" style={{ color: 'var(--ink)' }}>Earnback</p>
++          <p className="mt-2 text-sm">The {CHAIN.name} contract is not deployed yet. Set its address and deploy block in app-config.ts.</p>
++        </div>
++      </div>
++    )
++  }
+   return (
+     <BrowserRouter>
+       <Routes>
+--- a/src/pages/ProofPage.tsx
++++ b/src/pages/ProofPage.tsx
+@@ -159,7 +159,7 @@
+         </p>
+         <p className="text-sm max-w-2xl" style={{ color: 'var(--muted)' }}>
+           Independently verify the Earnback contract on-chain. No wallet required.
+-          Every figure on this page is read directly from Arc Testnet.
++          Every figure on this page is read directly from {CHAIN.name}.
+         </p>
+       </div>
+ 
+@@ -274,7 +274,7 @@
+               <Card>
+                 <p className="text-sm text-center py-6" style={{ color: 'var(--muted)' }}>
+                   No scenarios yet. Populate <span className="mono text-xs">src/proof-scenarios.ts</span> with
+-                  real transaction hashes from the testnet deployment to build a verifiable audit trail.
++                  real transaction hashes from this deployment to build a verifiable audit trail.
+                 </p>
+               </Card>
+             ) : (
