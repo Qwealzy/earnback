@@ -1,17 +1,17 @@
-"""kesinti_orani.py testleri: tasarım belgesindeki kuralları sabitler.
+"""retention_rate.py testleri: tasarım belgesindeki kuralları sabitler.
 
-Çalıştırma: python -m unittest discover -s araclar
+Çalıştırma: python -m unittest discover -s tools
 """
 
 import unittest
 
-from kesinti_orani import WAD, detay, kesinti_orani_bps, wad
+from retention_rate import WAD, detay, retention_rate_bps, wad
 
 URETIM = dict(a_wad=wad(1.0), b_wad=wad(11.5), z_wad=wad(1.0), tavan_bps=500, taban_bps=100)
 
 
 def oran(n, k, **p):
-    return kesinti_orani_bps(n, k, **dict(URETIM, **p))
+    return retention_rate_bps(n, k, **dict(URETIM, **p))
 
 
 class Kurallar(unittest.TestCase):
@@ -49,7 +49,7 @@ class Kurallar(unittest.TestCase):
             self.assertLessEqual(abs(d["oran_bps"] - beklenen), 1, (n, k))
 
     def test_belgedeki_ornekler(self):
-        # docs/KASA-TASARIM.md §4 tablosundaki değerler
+        # docs/DESIGN.md §4 tablosundaki değerler
         self.assertEqual(oran(10, 0), 282)
         self.assertEqual(oran(20, 0), 196)
         self.assertEqual(oran(10, 1), 479)

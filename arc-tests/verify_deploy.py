@@ -6,7 +6,7 @@ Checks, from raw RPC data only:
   3. runtime code == Studio testnet vault runtime with immutable positions masked;
   4. every constructor value read back with eth_call.
 
-Usage: python -I arc-testleri/deploy_dogrula.py <testnet|mainnet> <tx-hash>
+Usage: python -I arc-tests/verify_deploy.py <testnet|mainnet> <tx-hash>
 """
 import json
 import sys

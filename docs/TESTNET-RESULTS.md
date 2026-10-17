@@ -1,6 +1,6 @@
 # Earnback — testnet provası sonuçları
 
-Ortam: Arc Testnet (5042002), kasa `0xfa5e10d370140acbdfe977437be6742908449b39`, yerel arayüz (UI-FIX-3 uygulanmış). Doğrulama: `arc-testleri/oku.sh <id>` ve `arc-testleri/bakiye.sh`, yedek RPC `rpc.drpc.testnet.arc.io` (ana RPC bu IP'ye rate limit verdi).
+Ortam: Arc Testnet (5042002), kasa `0xfa5e10d370140acbdfe977437be6742908449b39`, yerel arayüz (UI-FIX-3 uygulanmış). Doğrulama: `arc-tests/read_agreement.sh <id>` ve `arc-tests/balances.sh`, yedek RPC `rpc.drpc.testnet.arc.io` (ana RPC bu IP'ye rate limit verdi).
 
 Hesaplar (aynı kişinin dört cüzdanı):
 
@@ -35,7 +35,7 @@ Bakiyeler: Y 5,472566 · T 5,492714.
 
 - **Anlaşma #2 (ilk deneme):** geçici kabulde E geç imzaladı, talep 0,1 USDC girildi (available 0,0125) ve iki kez `ExceedsPool` ile revert etti; süre doldu. Finalize edildi: talepsiz kapandı, kalan T'ye; **record(T) = (2, 0)**. Ders: talep süresi için garanti 600 sn.
 - **Anlaşma #3 ✅:** E → T, 0,5 USDC, garanti 600 sn. [RUN] Closed; talep 0,001 USDC, T kabul etti, `upheld = true`, awardedToPayer 0,001000; **record(T) = (3, 1)**.
-  - **Aktüerya zincirde doğrulandı:** T'nin kabul anındaki sicili (2, 0) iken `retentionBps = 364`. Referans `kesinti_orani.py` (demo önseli Beta(0,4; 4,6), z = 1, tavan 500, taban 100) aynı sicil için **364** veriyor; birebir aynı. T'nin yeni sicili (3, 1) için referans oran 500 (tavana dönüş).
+  - **Aktüerya zincirde doğrulandı:** T'nin kabul anındaki sicili (2, 0) iken `retentionBps = 364`. Referans `retention_rate.py` (demo önseli Beta(0,4; 4,6), z = 1, tavan 500, taban 100) aynı sicil için **364** veriyor; birebir aynı. T'nin yeni sicili (3, 1) için referans oran 500 (tavana dönüş).
 - Çekilmemiş bakiyeler (provanın sonunda çekilecek): E 0,001000 · T 0,999000; totalHeld 1,000000 = bu ikisinin toplamı.
 
 ## S5 — Sessizlik, anlaşma #4 ✅
@@ -62,7 +62,7 @@ E → Y, 0,5 USDC, hakem yok, garanti 120, cevap 60 sn. [RUN] Y'nin sicili (1, 0
 
 ## S7 — Aktüerya karşılaştırması (işlemsiz) ✅
 
-[RUN] Zincirdeki `rateFor(payee, maxBps)` ile referans `kesinti_orani.py` (demo önseli, z = 1, taban 100):
+[RUN] Zincirdeki `rateFor(payee, maxBps)` ile referans `retention_rate.py` (demo önseli, z = 1, taban 100):
 
 | Hesap | Sicil (n, k) | Zincir, tavan 500 | Referans | Zincir, tavan 1000 | Referans |
 |---|---|---|---|---|---|
@@ -90,7 +90,7 @@ Prova boyunca kabul anında dondurulan oranlar da referansla aynı: #3 T (2, 0) 
 
 - 8 anlaşmayla S1–S8'in hepsi testnet'te arayüzden uçtan uca yapıldı; her sonuç zincirden okundu.
 - **Kontrat davranışı tasarımla birebir:** sessizlik kabul (D2), hakem susarsa yükleniciye (D1), sayılmış geçici kabul (D10), pull-payment, `totalHeld` muhasebesi.
-- **Aktüerya zincirde doğrulandı:** dondurulan oranlar (364, 421, 500) ve `rateFor` sonuçları referans `kesinti_orani.py` ile birebir.
+- **Aktüerya zincirde doğrulandı:** dondurulan oranlar (364, 421, 500) ve `rateFor` sonuçları referans `retention_rate.py` ile birebir.
 - **Kontratta hata bulunmadı.** Bulunan 10 kusurun hepsi arayüzde; 6'sı yerelde düzeltildi, 4'ü Studio'ya gidecek.
 
 ## Provada bulunan arayüz kusurları
@@ -102,7 +102,7 @@ Prova boyunca kabul anında dondurulan oranlar da referansla aynı: #3 T (2, 0) 
 | 3 | Form önizlemesindeki "Credibility Z" kutusu Z yerine önsel ortalamayı (0,08) gösteriyor | Yerelde düzeltildi: yeni yüklenicide Z = 0 |
 | 4 | Approve onaylanınca tutar alanı siliniyor | Yerelde düzeltildi (UI-FIX-3 eki) |
 | 5 | Pay Progress, izin verilmeden de basılabiliyor | Yerelde düzeltildi: izin yetmiyorsa yalnız Approve, yetiyorsa yalnız Pay görünür |
-| 7 | Talep tutarı kullanılabilir teminatla karşılaştırılmıyor; 0,1 USDC talep (available 0,0125) zincirde `ExceedsPool` ile iki kez revert etti, gas boşa gitti (tx `0xcf74…a4`, `0x76b8…fe`; `arc-testleri/neden.sh` ile çözüldü). Form "en fazla X" göstermeli ve aşınca göndermemeli | Yerelde düzeltildi: alan en fazla tutarı gösteriyor, aşan talep gönderilmiyor |
+| 7 | Talep tutarı kullanılabilir teminatla karşılaştırılmıyor; 0,1 USDC talep (available 0,0125) zincirde `ExceedsPool` ile iki kez revert etti, gas boşa gitti (tx `0xcf74…a4`, `0x76b8…fe`; `arc-tests/revert_reason.sh` ile çözüldü). Form "en fazla X" göstermeli ve aşınca göndermemeli | Yerelde düzeltildi: alan en fazla tutarı gösteriyor, aşan talep gönderilmiyor |
 | 8 | Arayüz yalnız ana RPC'yi (`rpc.testnet.arc.io`) kullanıyor; prova sırasında anlaşma oluştururken "rate limit" alındı | Yerelde: okumalar resmi yedek RPC'lerden (dRPC, QuickNode, sonra ana) `fallback` ile. Studio'ya: aynı fallback, mainnet için de |
 | 9 | **`utils/rateCalc.ts` (BigInt replica) kontratın formülünü taklit etmiyordu**: Studio farklı bir "kredi" formülü yazmış, sicil sayılarını WAD'a çevirmeden önsele ekliyordu. Sicilsiz yüklenicide tesadüfen doğru (%5), sicillide yanlış: `/record/Y` (2, 0) için zincir 364, replica 500. Grafik ve form önizlemesi de bu kodu kullanıyor | Yerelde düzeltildi: kontratın `pUpper`/`rateFor` tamsayı matematiği adım adım (floor sqrt); 13 fikstürde Python referansıyla birebir [RUN] `bun run rateCalc.check.ts` → ALL MATCH |
 | 10 | Form önizlemesi her zaman "yeni yüklenici (n = 0)" oranını gösteriyor; girilen payee'nin sicilini kullanmıyor (tasarım §12: önerilen oran ve sicil canlı gösterilmeli) | Açık (Studio'ya) |

@@ -1,7 +1,7 @@
 # Earnback — mainnet hazırlık planı
 
 Taslak: 2026-10-18. Hedef gönderim 24–26 Ekim, son tarih 2 Kasım 04:59 UTC.
-Kaynaklar: `context/notes/22, 25, 26, 28, 29` ve `ANA-CONTEXT.md` §10 (çelişkide §10 geçerli), bu oturumdaki testnet provası (`docs/PROVA-SONUC.md`).
+Kaynaklar: `context/notes/22, 25, 26, 28, 29` ve `ANA-CONTEXT.md` §10 (çelişkide §10 geçerli), bu oturumdaki testnet provası (`docs/TESTNET-RESULTS.md`).
 
 **Değişmez kurallar:**
 - Mainnet deploy'u ve bütün gerçek USDC işlemlerini **kullanıcı kendi MetaMask EOA'sından** yapar; Claude hazırlar, göndermez (K6, G7).
@@ -13,7 +13,7 @@ Kaynaklar: `context/notes/22, 25, 26, 28, 29` ve `ANA-CONTEXT.md` §10 (çelişk
 **Mainnet kontratı (18 Ekim, kullanıcının E hesabından, yerel deploy sayfasıyla):**
 - Adres: **`0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81`** · chain 5042 · deploy bloğu **26.510.136**
 - Tx: `0x8761d0d431eea820354366f32a5833936397a0d09fe0a87015ca560a5e8a548b` · ücret 0,055033 USDC
-- [RUN] `arc-testleri/deploy_dogrula.py mainnet <tx>`: creation input = Studio artifact + K1 argümanları; runtime = Studio testnet kasası (immutable maskeli); 9 constructor değeri doğru.
+- [RUN] `arc-tests/verify_deploy.py mainnet <tx>`: creation input = Studio artifact + K1 argümanları; runtime = Studio testnet kasası (immutable maskeli); 9 constructor değeri doğru.
 - Testnet provası (aynı sayfa, aynı ayarlar): `0x1324d02cB513f33ce53D9246933ba8D1ec0450DF`.
 - Fork provası: Studio compass paketi olmadığı için Arc Foundry mainnet fork testi 5/5.
 - **Sourcify: exact_match** (creation + runtime), matchId 56348498.

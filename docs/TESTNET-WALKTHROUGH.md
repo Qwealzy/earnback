@@ -50,11 +50,11 @@ Sicil sırası önemli: **Y yalnız temiz işler yapar, talepler T'ye açılır.
 | S1b | Üçüncü temiz iş | E → Y, 0,5 USDC | Temel akış | Y'nin sicili n = 3, k = 0 |
 | S7 | Aktüerya | E → Y ve E → H, maxBps 500 | Y için ve hiç işi olmayan H için **yeni anlaşma formu**; kabul edip birer küçük ödeme | Y'nin oranı **%3,21** (321 bps), H'nin **%5**; T'nin (talepli) oranı tavana yakın. `/record/<adres>` sayfalarında zincir oranı = yerel hesap |
 
-S7'deki 321 bps, `araclar/kesinti_orani.py`'nin demo önseli Beta(0,4; 4,6) ile n = 3, k = 0 için verdiği değerdir (tavan 500, taban 100).
+S7'deki 321 bps, `tools/retention_rate.py`'nin demo önseli Beta(0,4; 4,6) ile n = 3, k = 0 için verdiği değerdir (tavan 500, taban 100).
 
 ## 4. Her adımda kaydet
 
-Her işlem için tx hash'ini `docs/PROVA-SONUC.md`'ye (Claude oluşturur) senaryo ve adım adıyla yaz ya da Claude'a söyle. Beklenmeyen her şeyi (hata mesajı, yanlış rakam, takılan buton) ekran görüntüsüyle not et.
+Her işlem için tx hash'ini `docs/TESTNET-RESULTS.md`'ye (Claude oluşturur) senaryo ve adım adıyla yaz ya da Claude'a söyle. Beklenmeyen her şeyi (hata mesajı, yanlış rakam, takılan buton) ekran görüntüsüyle not et.
 
 ## 5. Bitti sayılması için
 

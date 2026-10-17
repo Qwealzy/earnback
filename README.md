@@ -45,17 +45,17 @@ With the deployed demo prior Beta(0.4, 4.6), z = 1, max 5%, floor 1%:
 | 10 clean jobs | 1.75% |
 | 10 jobs, 1 upheld claim | 4.35% |
 
-Integer math in WAD, same operation order as the reference implementation [`araclar/kesinti_orani.py`](araclar/kesinti_orani.py); the UI shows the on-chain rate next to a BigInt replica of the same formula.
+Integer math in WAD, same operation order as the reference implementation [`tools/retention_rate.py`](tools/retention_rate.py); the UI shows the on-chain rate next to a BigInt replica of the same formula.
 
 ## How it was verified
 
 | Check | Result |
 |---|---|
 | Foundry tests (unit, rate fixtures, invariants) | 148 passing, also under Arc rules (`FOUNDRY_PROFILE=arc`, Arc Foundry `arc-forge`) |
-| Testnet fork tests with real Arc USDC (blocklist isolation, 18/6-decimal views, deemed acceptance) | 5/5 — [`arc-testleri/RetentionVaultFork.t.sol`](arc-testleri/RetentionVaultFork.t.sol) |
-| Mainnet fork rehearsal with real mainnet USDC | 5/5, and the Arc Foundry build equals the Studio artifact byte for byte — [`arc-testleri/RetentionVaultMainnetFork.t.sol`](arc-testleri/RetentionVaultMainnetFork.t.sol) |
-| End-to-end testnet walkthrough of every flow (8 agreements, ~70 transactions) | every result read back from chain; on-chain rates 364 / 421 / 500 bps equal the reference — [`docs/PROVA-SONUC.md`](docs/PROVA-SONUC.md) |
-| Mainnet deploy | creation input = Studio artifact + intended constructor args; runtime code = Studio testnet vault (immutables masked) — [`arc-testleri/deploy_dogrula.py`](arc-testleri/deploy_dogrula.py) |
+| Testnet fork tests with real Arc USDC (blocklist isolation, 18/6-decimal views, deemed acceptance) | 5/5 — [`arc-tests/RetentionVaultFork.t.sol`](arc-tests/RetentionVaultFork.t.sol) |
+| Mainnet fork rehearsal with real mainnet USDC | 5/5, and the Arc Foundry build equals the Studio artifact byte for byte — [`arc-tests/RetentionVaultMainnetFork.t.sol`](arc-tests/RetentionVaultMainnetFork.t.sol) |
+| End-to-end testnet walkthrough of every flow (8 agreements, ~70 transactions) | every result read back from chain; on-chain rates 364 / 421 / 500 bps equal the reference — [`docs/TESTNET-RESULTS.md`](docs/TESTNET-RESULTS.md) |
+| Mainnet deploy | creation input = Studio artifact + intended constructor args; runtime code = Studio testnet vault (immutables masked) — [`arc-tests/verify_deploy.py`](arc-tests/verify_deploy.py) |
 
 ## Built with Arc Studio
 
@@ -79,8 +79,8 @@ Integer math in WAD, same operation order as the reference implementation [`arac
 | Path | What |
 |---|---|
 | `studio/` | Arc Studio export: `contracts/RetentionVault.sol`, Foundry tests, compiled artifact, React app (`src/`) |
-| `araclar/` | Reference implementation of the rate formula and its tests (Python) |
-| `arc-testleri/` | Fork tests (testnet, mainnet) and chain-reading / verification scripts |
+| `tools/` | Reference implementation of the rate formula and its tests (Python). Comments in the Studio code and in `docs/studio/` use its original name, `araclar/kesinti_orani.py` |
+| `arc-tests/` | Fork tests (testnet, mainnet) and chain-reading / verification scripts |
 | `deploy/` | Local deploy page (MetaMask, no recompilation) |
 | `verify/` | Sourcify inputs and submit script |
 | `docs/` | Design document, testnet walkthrough and results, mainnet plan, Studio fix requests (design notes are in Turkish) |
@@ -89,8 +89,8 @@ Integer math in WAD, same operation order as the reference implementation [`arac
 
 ```bash
 # rate formula reference and tests
-python araclar/kesinti_orani.py
-python -m unittest discover -s araclar
+python tools/retention_rate.py
+python -m unittest discover -s tools
 
 # contract tests under Arc rules (Arc Foundry; OpenZeppelin 5.1.0 comes with bun install,
 # forge-std is expected in studio/lib/forge-std)

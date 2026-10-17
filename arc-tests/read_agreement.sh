@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read one agreement from the testnet vault, plus the parties' balances and records.
-# Usage (WSL): bash arc-testleri/oku.sh <agreement-id>
+# Usage (WSL): bash arc-tests/read_agreement.sh <agreement-id>
 set -euo pipefail
 ID=${1:?agreement id}
 A=0xfa5e10d370140acbdfe977437be6742908449b39

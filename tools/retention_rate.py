@@ -15,7 +15,7 @@ Model (deneyim çarpanı / experience rating):
   Yani yeni yüklenici tavanı öder; ihtiyatlı risk tahmini düştüğü oranda kesinti düşer.
   Kredibilite (gösterim için)  Z = n / (n + a + b)
 
-Kullanım: python araclar/kesinti_orani.py
+Kullanım: python tools/retention_rate.py
 """
 
 import math
@@ -33,7 +33,7 @@ def isqrt(x):
     return math.isqrt(x)
 
 
-def kesinti_orani_bps(n, k, a_wad, b_wad, z_wad, tavan_bps, taban_bps):
+def retention_rate_bps(n, k, a_wad, b_wad, z_wad, tavan_bps, taban_bps):
     """Kontratın hesaplayacağı kesinti oranı (bps). Girdiler tam sayı."""
     if not (0 <= k <= n):
         raise ValueError("0 <= k <= n olmalı")
@@ -67,7 +67,7 @@ def detay(n, k, a, b, z, tavan_bps, taban_bps):
         "sd": sd,
         "p_ust": p_hat + z * sd,
         "Z": n / (n + a + b),
-        "oran_bps": kesinti_orani_bps(n, k, wad(a), wad(b), wad(z), tavan_bps, taban_bps),
+        "oran_bps": retention_rate_bps(n, k, wad(a), wad(b), wad(z), tavan_bps, taban_bps),
     }
 
 
@@ -83,5 +83,7 @@ def tablo(baslik, a, b, z, tavan_bps=500, taban_bps=100):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.stdout.reconfigure(encoding="utf-8")  # the table uses p̂; non-UTF-8 consoles (e.g. cp1254) would fail
     tablo("Üretim parametreleri (öneri)", a=1.0, b=11.5, z=1.0)
     tablo("Demo parametreleri (öneri)", a=0.4, b=4.6, z=1.0)

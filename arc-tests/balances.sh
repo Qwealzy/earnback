@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Testnet USDC balances of the rehearsal accounts (ERC-20 view, 6 decimals) and vault withdrawable.
-# Usage (WSL): bash arc-testleri/bakiye.sh E=0x.. Y=0x.. ...
+# Usage (WSL): bash arc-tests/balances.sh E=0x.. Y=0x.. ...
 set -euo pipefail
 R=${ARC_TESTNET_RPC_URL:-https://rpc.testnet.arc.io}
 USDC=0x3600000000000000000000000000000000000000

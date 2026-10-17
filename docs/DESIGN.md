@@ -2,7 +2,7 @@
 
 Taslak: 2026-10-16. Durum: **D1, D2, D5, D9 kararlaştırıldı (16 Ekim); D7 ürün adı **Earnback** (17 Ekim); D3, D4, D6, D8 öneriyle ilerliyor.** Ayrıntı §15'te.
 - Dayanaklar: `context/notes/34` (retention verisi), `36` (ikinci sektör), `ZORUNLU-SARTLAR.md`, `notes/23` (güvenlik), `notes/24` (UX).
-- Aktüeryal hesabın referansı: `araclar/kesinti_orani.py` (testleri: `araclar/test_kesinti_orani.py`).
+- Aktüeryal hesabın referansı: `tools/retention_rate.py` (testleri: `tools/test_retention_rate.py`).
 
 ---
 
@@ -106,7 +106,7 @@ Z       = n / (n + a + b)                              (kredibilite, panelde gö
 
 **Önsel ortalama %8.** Kaynağı: retention'ın sözleşmelerin ~%8'inde gerçekten kullanılması (Pye Tait, notes/34 §1).
 
-**Örnekler** (tavan %5, taban %1; değerler `araclar/kesinti_orani.py` çıktısı, testlerde sabit):
+**Örnekler** (tavan %5, taban %1; değerler `tools/retention_rate.py` çıktısı, testlerde sabit):
 
 | Sicil | Üretim: Beta(1; 11,5) | Demo: Beta(0,4; 4,6) |
 |---|---|---|
@@ -129,7 +129,7 @@ Z       = n / (n + a + b)                              (kredibilite, panelde gö
 **Tam sayı uygulaması:**
 - WAD (1e18) ölçek, aşağı yuvarlama.
 - Karekök için OpenZeppelin `Math.sqrt`.
-- Formülün sırası `kesinti_orani.py`'deki `_p_ust` ile **aynı** olmalı. Testler (n, k) fikstürleriyle Python çıktısını birebir karşılaştırır.
+- Formülün sırası `retention_rate.py`'deki `_p_ust` ile **aynı** olmalı. Testler (n, k) fikstürleriyle Python çıktısını birebir karşılaştırır.
 
 ## 5. Para akışı ve muhasebe
 - **Tek giriş noktası:** `payProgress`. İşveren yalnızca o tutar kadar `approve` verir; sınırsız onay istenmez (G10).
@@ -185,7 +185,7 @@ Kaynak: `ZORUNLU-SARTLAR` T5–T10 ve G1–G10, `notes/23` L1–L14.
 | R2 | Hakem yalnızca payer ile payee arasında bölebilir; `payerShare ≤ amount` |
 | R3 | `finalize` yalnızca `now ≥ defectEnd` iken ve açık talep yokken çalışır |
 | R4 | Her hakedişte payee'nin bakiyesi tam olarak `amount − kesinti` artar |
-| R5 | Kontratın oranı, `kesinti_orani.py` fikstürleriyle birebir aynı |
+| R5 | Kontratın oranı, `retention_rate.py` fikstürleriyle birebir aynı |
 | R6 | Her `Closed` anlaşmada sicilde n tam bir kez artar; k anlaşma başına en fazla bir kez artar |
 | R7 | Ödeme toplamı `contractValue`'yu aşamaz; `totalHeld`, `maxTotalHeld`'i aşamaz |
 

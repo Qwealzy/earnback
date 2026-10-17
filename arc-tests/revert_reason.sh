@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Replay a failed tx's calldata as an eth_call from the same sender and decode the revert reason.
-# Usage (WSL): bash arc-testleri/neden.sh <tx-hash>
+# Usage (WSL): bash arc-tests/revert_reason.sh <tx-hash>
 set -euo pipefail
 TX=${1:?tx hash}
 R=${ARC_TESTNET_RPC_URL:-https://rpc.testnet.arc.io}

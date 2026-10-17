@@ -1,6 +1,6 @@
 """Expected /proof totals for the testnet vault, from raw logs (QuickNode, 10,000-block chunks).
 
-Usage: python -I arc-testleri/kanit_toplam.py
+Usage: python -I arc-tests/proof_totals.py
 """
 import json
 import time
