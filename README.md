@@ -9,7 +9,7 @@ Built with Arc Studio for *Arc Microgrants 2*.
 | Arc mainnet contract | [`0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81`](https://explorer.arc.io/address/0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81) (chain 5042) |
 | Source verification | [Sourcify: exact match](https://repo.sourcify.dev/5042/0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81) (creation and runtime bytecode) |
 | Deploy transaction | [`0x8761d0d4…548b`](https://explorer.arc.io/tx/0x8761d0d431eea820354366f32a5833936397a0d09fe0a87015ca560a5e8a548b), block 26,510,136 |
-| Live app | _link added after hosting_ |
+| Live app | [earnback.numeralabs.xyz](https://earnback.numeralabs.xyz) (Arc mainnet; proof page: [/proof](https://earnback.numeralabs.xyz/proof)) |
 | Testnet vault (rehearsal, 8 agreements) | [`0xfA5E10d3…9b39`](https://explorer.testnet.arc.io/address/0xfa5e10d370140acbdfe977437be6742908449b39), Sourcify exact match |
 
 ## The problem
