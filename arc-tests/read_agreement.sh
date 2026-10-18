@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Read one agreement from the testnet vault, plus the parties' balances and records.
-# Usage (WSL): bash arc-tests/read_agreement.sh <agreement-id>
+# Usage (WSL): bash arc-tests/read_agreement.sh <agreement-id>   (mainnet: VAULT=0xd8EA… ARC_TESTNET_RPC_URL=https://rpc.mainnet.arc.io)
 set -euo pipefail
 ID=${1:?agreement id}
-A=0xfa5e10d370140acbdfe977437be6742908449b39
+A=${VAULT:-0xfa5e10d370140acbdfe977437be6742908449b39}
 R=${ARC_TESTNET_RPC_URL:-https://rpc.testnet.arc.io}
 C=~/.local/bin/arc-cast
 

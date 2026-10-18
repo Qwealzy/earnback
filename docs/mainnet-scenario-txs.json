@@ -1,0 +1,380 @@
+[
+ {
+  "block": 26515939,
+  "event": "AgreementCreated",
+  "key": 0,
+  "tx": "0xff9e7f62f7054cdad98ead3625799102b00e34ae626da3408e400b1cdf5f0e17",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.004996926574
+ },
+ {
+  "block": 26516006,
+  "event": "AgreementAccepted",
+  "key": 0,
+  "tx": "0xaf22227b29b0eb5f78099290b6334ed61207e8c5a425e4a91224e46b4f842759",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.001862178883
+ },
+ {
+  "block": 26516092,
+  "event": "ProgressPaid",
+  "key": 0,
+  "tx": "0x763be0ecca7bf535f0c8eecafc8631c2f653d597f858b12abc6467e237009587",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.003353693507
+ },
+ {
+  "block": 26516139,
+  "event": "ProgressPaid",
+  "key": 0,
+  "tx": "0x3270920adcb772f472f8b31d1d5393d88630c8bf9f53ccb283aaf09b45dae1fa",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.001883161907
+ },
+ {
+  "block": 26516184,
+  "event": "ProvisionalSigned",
+  "key": 0,
+  "tx": "0x545688dd25e7d4b7e1a87cb0341ed169fd8d450b60580604cb899f617a785ffb",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.002204743949
+ },
+ {
+  "block": 26516184,
+  "event": "ProvisionalRequested",
+  "key": 0,
+  "tx": "0x545688dd25e7d4b7e1a87cb0341ed169fd8d450b60580604cb899f617a785ffb",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.002204743949
+ },
+ {
+  "block": 26516222,
+  "event": "ProvisionalSigned",
+  "key": 0,
+  "tx": "0xef09e683e3edc86feb7ffcd30b4e629d87daaa301226e971f9e61f3eb86a8656",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180622071
+ },
+ {
+  "block": 26516222,
+  "event": "ProvisionalAccepted",
+  "key": 0,
+  "tx": "0xef09e683e3edc86feb7ffcd30b4e629d87daaa301226e971f9e61f3eb86a8656",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180622071
+ },
+ {
+  "block": 26516912,
+  "event": "AgreementCreated",
+  "key": 1,
+  "tx": "0x5d7bc09e49febb77ab969bdd2bcc94980c4b0f61d1864bf4d6d0311443dc2db4",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.005064497931
+ },
+ {
+  "block": 26516969,
+  "event": "AgreementAccepted",
+  "key": 1,
+  "tx": "0x86081e7023d3d3da90c46dc5c285d1c50a4bc1acf9ea26cea6f17a19f494c3d7",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.001862436871
+ },
+ {
+  "block": 26517021,
+  "event": "ProgressPaid",
+  "key": 1,
+  "tx": "0xeb53f9cb32f034dac0adfef517cf644649e28137c4873356d73b95d9719372ae",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002986318595
+ },
+ {
+  "block": 26517075,
+  "event": "ProvisionalSigned",
+  "key": 1,
+  "tx": "0xe596afc8f3297a592c0e5e7242b620e2c2c560134301be53a3960ddf3fd4bd63",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.002205001937
+ },
+ {
+  "block": 26517075,
+  "event": "ProvisionalRequested",
+  "key": 1,
+  "tx": "0xe596afc8f3297a592c0e5e7242b620e2c2c560134301be53a3960ddf3fd4bd63",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.002205001937
+ },
+ {
+  "block": 26517115,
+  "event": "ProvisionalSigned",
+  "key": 1,
+  "tx": "0xe014be7e47c80491f9ceb94b4ece010f9f8ecfccde00ff74ba1c31b1b6330703",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180880059
+ },
+ {
+  "block": 26517115,
+  "event": "ProvisionalAccepted",
+  "key": 1,
+  "tx": "0xe014be7e47c80491f9ceb94b4ece010f9f8ecfccde00ff74ba1c31b1b6330703",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180880059
+ },
+ {
+  "block": 26517156,
+  "event": "ClaimOpened",
+  "key": 1,
+  "tx": "0x965f853226b96cfe2cb51c088e370fb21bda7453a894ba103d2c0a412750358d",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.003331334547
+ },
+ {
+  "block": 26517211,
+  "event": "ClaimAnswered",
+  "key": 1,
+  "tx": "0x17de00dc2e2b985b94f7f986b333f3472cf58297e41311eb9b7cb9c0c4b9f685",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.00132240349
+ },
+ {
+  "block": 26517300,
+  "event": "ClaimDecided",
+  "key": 1,
+  "tx": "0xde15e6ba5c7cff58156f08565e23d94a5c4279328cf51e59891d98e4de3c3a70",
+  "from": "0xb77ad296072f6c2ff915dbb378f5c21acccf4e6e",
+  "status": 1,
+  "fee": 0.002228994821
+ },
+ {
+  "block": 26517446,
+  "event": "Finalized",
+  "key": 0,
+  "tx": "0x0b70c7f07366189eba7382ca72da912435926c873e579c345bdcd8c4ec3907df",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.001736753717
+ },
+ {
+  "block": 26517601,
+  "event": "Withdrawn",
+  "key": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "tx": "0x76f43ecdf5574f994fbd81a51cf2872405b8702e9e3dab21c34fe90909cb6ba9",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.001256530554
+ },
+ {
+  "block": 26517725,
+  "event": "AgreementCreated",
+  "key": 2,
+  "tx": "0x8a2b6ca3acd8488d183e43f4f2dc4e087e60e3e72bff20d02f1eddded4ee99df",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.004629293674
+ },
+ {
+  "block": 26517780,
+  "event": "AgreementAccepted",
+  "key": 2,
+  "tx": "0x89341c233d270d6a61d4f1eaf6e93e9a38ac9a19d3293263e94917e1269b1277",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.001862436871
+ },
+ {
+  "block": 26517854,
+  "event": "ProgressPaid",
+  "key": 2,
+  "tx": "0x50c67db688af619ed069df8312d2fd7ca4e0bd095ee9160f36e12fc61984dfd0",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002986318595
+ },
+ {
+  "block": 26517903,
+  "event": "ProvisionalSigned",
+  "key": 2,
+  "tx": "0xa9eab4f89edd927f8c5f8d9fa691a0830bfb70f2057831a9af7188c5a74f7355",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.002205001937
+ },
+ {
+  "block": 26517903,
+  "event": "ProvisionalRequested",
+  "key": 2,
+  "tx": "0xa9eab4f89edd927f8c5f8d9fa691a0830bfb70f2057831a9af7188c5a74f7355",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.002205001937
+ },
+ {
+  "block": 26517941,
+  "event": "ProvisionalSigned",
+  "key": 2,
+  "tx": "0x2a4ba44c05b5d37693843d52df4058b412289e327ec07ad649f6da9a186bff4b",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180880059
+ },
+ {
+  "block": 26517941,
+  "event": "ProvisionalAccepted",
+  "key": 2,
+  "tx": "0x2a4ba44c05b5d37693843d52df4058b412289e327ec07ad649f6da9a186bff4b",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002180880059
+ },
+ {
+  "block": 26518217,
+  "event": "AgreementCreated",
+  "key": 3,
+  "tx": "0x3e0cee95e3282b0f7d193ebe664e8dd12b2ea00af54085e0e07fd10dcbb03bca",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.004678002712
+ },
+ {
+  "block": 26518265,
+  "event": "AgreementAccepted",
+  "key": 3,
+  "tx": "0xfa0ea2f766a12fd44e3056babda336e6f6d761e5c3fd6837b7e010669731f767",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.001881928396
+ },
+ {
+  "block": 26518321,
+  "event": "ProgressPaid",
+  "key": 3,
+  "tx": "0xa08832b58899cd1805812c567532836a3b6af630508d8941420732f9f40278a5",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002661804665
+ },
+ {
+  "block": 26518367,
+  "event": "ProvisionalSigned",
+  "key": 3,
+  "tx": "0x1144003c773cd07ea1748c97edbef5d9e52061ffe200158237531e1c593a2a3f",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.002241309239
+ },
+ {
+  "block": 26518367,
+  "event": "ProvisionalRequested",
+  "key": 3,
+  "tx": "0x1144003c773cd07ea1748c97edbef5d9e52061ffe200158237531e1c593a2a3f",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.002241309239
+ },
+ {
+  "block": 26518398,
+  "event": "ProvisionalSigned",
+  "key": 3,
+  "tx": "0x07c6569f09aaadd69791696d48631229e2854f4207a043818152dfb16b61945c",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002203704284
+ },
+ {
+  "block": 26518398,
+  "event": "ProvisionalAccepted",
+  "key": 3,
+  "tx": "0x07c6569f09aaadd69791696d48631229e2854f4207a043818152dfb16b61945c",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002203704284
+ },
+ {
+  "block": 26518426,
+  "event": "ClaimOpened",
+  "key": 3,
+  "tx": "0xb0b14133dd7dd2adfcf545d659af700ceb1da1b2db49d8fd55ab22458d06bcaf",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.003366198972
+ },
+ {
+  "block": 26518469,
+  "event": "Finalized",
+  "key": 1,
+  "tx": "0xc3b8e57988ff6ee60a39d0cf92da3d2ceadf9a30ce6d7c93fe80b6c068ea46f0",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.002241786456
+ },
+ {
+  "block": 26518809,
+  "event": "ClaimResolved",
+  "key": 3,
+  "tx": "0x9c350bb34a85a64a8bd65da209e97a7b2a490c686cbf2307c4a98bd3db1c1c6c",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.001880516336
+ },
+ {
+  "block": 26519193,
+  "event": "Finalized",
+  "key": 2,
+  "tx": "0x13166eecfe74d0600d2d8d5fa1ff2f88ef30294843d21ea25f9c7fd2fcd19a57",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.001399442845
+ },
+ {
+  "block": 26519214,
+  "event": "Withdrawn",
+  "key": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "tx": "0x0a03aee65d1184e59dfed9493cfd07e2be36335471495b107ef5f083806fa0c9",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.001291481262
+ },
+ {
+  "block": 26519306,
+  "event": "Withdrawn",
+  "key": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "tx": "0x9924fe6daa59f865804fd424488d6fab86ff501e4558db81c361ad4963c368ee",
+  "from": "0x6bc18be75bff8a9fd4636e006d520f8f5a491d9a",
+  "status": 1,
+  "fee": 0.001285812
+ },
+ {
+  "block": 26519358,
+  "event": "Withdrawn",
+  "key": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "tx": "0x80cef23f7ce9067c13107d705836fccb73d5d7d9e8be448c776515240fcfe511",
+  "from": "0x51f83314748aacb4479043ad46b6f2ffa4c6a5c6",
+  "status": 1,
+  "fee": 0.001291481262
+ },
+ {
+  "block": 26519607,
+  "event": "Finalized",
+  "key": 3,
+  "tx": "0xd9ccd79e568d14936f534414b4e86d45629e3b8e82ac6116f7fa76c0fc4bd21c",
+  "from": "0x451eb23355e37eb4f8ca21778f0c68d467e93912",
+  "status": 1,
+  "fee": 0.001870306056
+ }
+]

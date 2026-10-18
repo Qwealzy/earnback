@@ -10,6 +10,7 @@ Built with Arc Studio for *Arc Microgrants 2*.
 | Source verification | [Sourcify: exact match](https://repo.sourcify.dev/5042/0xd8EA0473Cfd03FfB21BeDFfCf3A4882FF7CB9e81) (creation and runtime bytecode) |
 | Deploy transaction | [`0x8761d0d4…548b`](https://explorer.arc.io/tx/0x8761d0d431eea820354366f32a5833936397a0d09fe0a87015ca560a5e8a548b), block 26,510,136 |
 | Live app | [earnback.numeralabs.xyz](https://earnback.numeralabs.xyz) (Arc mainnet; proof page: [/proof](https://earnback.numeralabs.xyz/proof)) |
+| Mainnet scenarios | 4 agreements (clean job, arbitrated claim, unanswered claim, lower rate for a clean record), 34 transactions, all successful — [`docs/MAINNET-RESULTS.md`](docs/MAINNET-RESULTS.md) |
 | Testnet vault (rehearsal, 8 agreements) | [`0xfA5E10d3…9b39`](https://explorer.testnet.arc.io/address/0xfa5e10d370140acbdfe977437be6742908449b39), Sourcify exact match |
 
 ## The problem
@@ -55,12 +56,13 @@ Integer math in WAD, same operation order as the reference implementation [`tool
 | Testnet fork tests with real Arc USDC (blocklist isolation, 18/6-decimal views, deemed acceptance) | 5/5 — [`arc-tests/RetentionVaultFork.t.sol`](arc-tests/RetentionVaultFork.t.sol) |
 | Mainnet fork rehearsal with real mainnet USDC | 5/5, and the Arc Foundry build equals the Studio artifact byte for byte — [`arc-tests/RetentionVaultMainnetFork.t.sol`](arc-tests/RetentionVaultMainnetFork.t.sol) |
 | End-to-end testnet walkthrough of every flow (8 agreements, ~70 transactions) | every result read back from chain; on-chain rates 364 / 421 / 500 bps equal the reference — [`docs/TESTNET-RESULTS.md`](docs/TESTNET-RESULTS.md) |
+| Mainnet scenarios with real USDC (author's own wallets) | 4 agreements closed, 34 transactions with status 1, fees 0.083 USDC in total; the contractor's rate fell from 500 to 421 bps after one clean job, equal to the reference — [`docs/MAINNET-RESULTS.md`](docs/MAINNET-RESULTS.md) |
 | Mainnet deploy | creation input = Studio artifact + intended constructor args; runtime code = Studio testnet vault (immutables masked) — [`arc-tests/verify_deploy.py`](arc-tests/verify_deploy.py) |
 
 ## Built with Arc Studio
 
 - Arc Studio wrote the contract (Smart Contract mode, with its auditors and Slither), the tests and the React app, and deployed the testnet vault. The export is in [`studio/`](studio/), including `AGENTS.md` and the compiled artifact.
-- Every later UI change was sent to Studio as a written fix request and applied there: [`docs/studio/`](docs/studio/) (UI-FIX-1 … UI-FIX-5, with the exact diffs).
+- Every later UI change was sent to Studio as a written fix request and applied there: [`docs/studio/`](docs/studio/) (UI-FIX-1 … UI-FIX-6, with the exact diffs and files).
 - Outside Studio, as the hackathon rules require for mainnet: the deploy, from the author's own wallet, with a local page that deploys the Studio artifact unchanged ([`deploy/`](deploy/)); source verification ([`verify/`](verify/)); and the checks above.
 - Studio's `compass-deploy --mode verify` mainnet rehearsal could not run because its `@circlefin/compass-chains` registry package is not available (npm 404). The mainnet fork rehearsal was done with Arc Foundry instead.
 
